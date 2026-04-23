@@ -588,25 +588,25 @@ async function processRecording() {
   const pitch = parseFloat(document.getElementById('pitchSlider').value);
   const speed = parseFloat(document.getElementById('speedSlider').value);
   const vol = parseFloat(document.getElementById('volSlider').value) / 100;
+  const echoAmt = parseFloat(document.getElementById('echoSlider').value) / 100;
 
-  // Resample to achieve pitch shift (speed up audio = higher pitch)
-  // The chipmunk effect: play back at higher sample rate
   const originalSR = decoded.sampleRate;
   const numChannels = decoded.numberOfChannels;
   const originalLength = decoded.length;
 
-  // New length after speed adjustment
-  const newLength = Math.floor(originalLength / speed);
+  // Extra buffer length to let echo tail ring out
+  const echoTailSamples = echoAmt > 0 ? Math.floor(originalSR * 3.5) : 0;
+  const newLength = Math.floor(originalLength / speed) + echoTailSamples;
   const offlineCtx = new OfflineAudioContext(numChannels, newLength, originalSR);
 
   const bufferSrc = offlineCtx.createBufferSource();
   bufferSrc.buffer = decoded;
-  bufferSrc.playbackRate.value = pitch * speed; // pitch shift combined with speed
+  bufferSrc.playbackRate.value = pitch * speed;
 
   const gainNode = offlineCtx.createGain();
   gainNode.gain.value = vol;
 
-  // Subtle formant-like brightening via EQ
+  // EQ brightening
   const highShelf = offlineCtx.createBiquadFilter();
   highShelf.type = 'highshelf';
   highShelf.frequency.value = 3000;
@@ -618,15 +618,40 @@ async function processRecording() {
   presence.Q.value = 1.2;
   presence.gain.value = 4;
 
+  // Echo chain: delay + feedback loop
+  const delayNode = offlineCtx.createDelay(3.0);
+  delayNode.delayTime.value = 0.32; // 320ms delay tap
+
+  const feedbackGain = offlineCtx.createGain();
+  feedbackGain.gain.value = echoAmt * 0.72; // feedback amount
+
+  const echoMixGain = offlineCtx.createGain();
+  echoMixGain.gain.value = echoAmt * 0.85; // wet mix
+
+  const dryGain = offlineCtx.createGain();
+  dryGain.gain.value = 1.0;
+
+  // Signal path: src → EQ chain → gainNode → dry out + echo
   bufferSrc.connect(presence);
   presence.connect(highShelf);
   highShelf.connect(gainNode);
-  gainNode.connect(offlineCtx.destination);
+
+  // Dry path
+  gainNode.connect(dryGain);
+  dryGain.connect(offlineCtx.destination);
+
+  // Wet/echo path
+  gainNode.connect(echoMixGain);
+  echoMixGain.connect(delayNode);
+  delayNode.connect(offlineCtx.destination);
+  // Feedback loop
+  delayNode.connect(feedbackGain);
+  feedbackGain.connect(delayNode);
+
   bufferSrc.start(0);
 
   processedBuffer = await offlineCtx.startRendering();
 
-  // Convert to WAV for download/playback
   const wavBlob = bufferToWave(processedBuffer, processedBuffer.length);
   const url = URL.createObjectURL(wavBlob);
   downloadBtn.href = url;
@@ -702,6 +727,7 @@ recordBtn.addEventListener('touchend', e => { e.preventDefault(); stopRecording(
 document.getElementById('pitchSlider').addEventListener('change', () => { if (recordedChunks.length) processRecording(); });
 document.getElementById('speedSlider').addEventListener('change', () => { if (recordedChunks.length) processRecording(); });
 document.getElementById('volSlider').addEventListener('change', () => { if (recordedChunks.length) processRecording(); });
+document.getElementById('echoSlider').addEventListener('change', () => { if (recordedChunks.length) processRecording(); });
 </script>
 
 </body>
