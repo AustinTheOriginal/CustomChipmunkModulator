@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐿️ Chipmunk Voice</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFF8E7;
+    --acorn: #C8722A;
+    --acorn-dark: #8B4A15;
+    --fur: #D4956A;
+    --stripe: #5C3A1E;
+    --cheek: #F4A374;
+    --leaf: #5A8C3C;
+    --sky: #87CEEB;
+    --white: #FFFDF5;
+    --shadow: rgba(90,50,20,0.18);
+  }
+
+- { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+background: var(–bg);
+font-family: ‘Nunito’, sans-serif;
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: flex-start;
+overflow-y: auto;
+overflow-x: hidden;
+position: relative;
+padding: 16px 0 32px;
+}
+
+/* Scattered acorns background */
+.bg-deco {
+position: fixed;
+inset: 0;
+pointer-events: none;
+z-index: 0;
+}
+.bg-deco span {
+position: absolute;
+font-size: 1.5rem;
+opacity: 0.12;
+animation: floatDeco 8s ease-in-out infinite;
+}
+@keyframes floatDeco {
+0%,100% { transform: translateY(0) rotate(0deg); }
+50% { transform: translateY(-12px) rotate(15deg); }
+}
+
+.container {
+position: relative;
+z-index: 1;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 12px;
+padding: 12px 16px 20px;
+max-width: 420px;
+width: 100%;
+}
+
+h1 {
+font-family: ‘Fredoka One’, cursive;
+font-size: 1.9rem;
+color: var(–stripe);
+letter-spacing: 1px;
+text-align: center;
+line-height: 1.1;
+text-shadow: 2px 2px 0 var(–cheek);
+}
+h1 span { color: var(–acorn); }
+
+/* Chipmunk face */
+.chipmunk {
+position: relative;
+width: 100px;
+height: 100px;
+filter: drop-shadow(3px 4px 8px var(–shadow));
+transition: transform 0.15s ease;
+}
+.chipmunk.talking { animation: chatter 0.15s steps(1) infinite; }
+@keyframes chatter {
+0%,100% { transform: scale(1) rotate(-2deg); }
+50% { transform: scale(1.04) rotate(2deg); }
+}
+
+.face-bg {
+width: 100px; height: 100px;
+background: radial-gradient(circle at 50% 45%, var(–fur), var(–acorn) 80%);
+border-radius: 50% 50% 48% 48%;
+position: absolute;
+}
+.stripe-l, .stripe-r, .stripe-m {
+position: absolute;
+border-radius: 4px;
+}
+.stripe-m {
+width: 10px; height: 45px;
+background: var(–stripe);
+top: 15px; left: 50%; transform: translateX(-50%);
+opacity: 0.55;
+}
+.stripe-l {
+width: 6px; height: 38px;
+background: var(–stripe);
+top: 19px; left: 21px;
+opacity: 0.45;
+transform: rotate(-4deg);
+}
+.stripe-r {
+width: 6px; height: 38px;
+background: var(–stripe);
+top: 19px; right: 21px;
+opacity: 0.45;
+transform: rotate(4deg);
+}
+/* Ears */
+.ear {
+position: absolute;
+width: 24px; height: 26px;
+background: var(–acorn);
+border-radius: 50% 50% 30% 30%;
+top: -9px;
+}
+.ear.left { left: 11px; transform: rotate(-12deg); }
+.ear.right { right: 11px; transform: rotate(12deg); }
+.ear-inner {
+position: absolute;
+width: 14px; height: 16px;
+background: var(–cheek);
+border-radius: 50% 50% 30% 30%;
+top: 4px; left: 5px;
+}
+/* Eyes */
+.eyes { position: absolute; top: 33px; width: 100%; display: flex; justify-content: center; gap: 20px; }
+.eye {
+width: 14px; height: 14px;
+background: #1a0a00;
+border-radius: 50%;
+position: relative;
+border: 2px solid #2c1300;
+}
+.eye::after {
+content: ‘’;
+position: absolute;
+width: 5px; height: 5px;
+background: white;
+border-radius: 50%;
+top: 2px; left: 2px;
+}
+.eye.blink { animation: blink 3.5s ease-in-out infinite; }
+@keyframes blink {
+0%,92%,100% { transform: scaleY(1); }
+96% { transform: scaleY(0.1); }
+}
+/* Nose */
+.nose {
+position: absolute;
+top: 54px; left: 50%;
+transform: translateX(-50%);
+width: 9px; height: 7px;
+background: var(–stripe);
+border-radius: 50%;
+}
+/* Cheeks */
+.cheeks { position: absolute; top: 56px; width: 100%; display: flex; justify-content: space-between; padding: 0 9px; }
+.cheek-puff {
+width: 21px; height: 16px;
+background: var(–cheek);
+border-radius: 50%;
+opacity: 0.65;
+transition: transform 0.1s;
+}
+.chipmunk.talking .cheek-puff { transform: scaleX(1.15); }
+/* Mouth */
+.mouth {
+position: absolute;
+top: 66px; left: 50%;
+transform: translateX(-50%);
+width: 18px; height: 9px;
+border-bottom: 2px solid var(–stripe);
+border-radius: 0 0 50% 50%;
+transition: height 0.1s;
+}
+.chipmunk.talking .mouth { height: 13px; }
+
+.card {
+background: var(–white);
+border-radius: 20px;
+padding: 18px 18px 16px;
+width: 100%;
+box-shadow: 0 6px 28px var(–shadow), 0 0 0 3px var(–cheek);
+display: flex;
+flex-direction: column;
+gap: 14px;
+}
+
+/* Record button */
+.record-btn {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 10px;
+width: 100%;
+padding: 16px;
+border-radius: 50px;
+border: none;
+font-family: ‘Fredoka One’, cursive;
+font-size: 1.3rem;
+letter-spacing: 0.5px;
+cursor: pointer;
+transition: all 0.18s cubic-bezier(.34,1.56,.64,1);
+background: var(–acorn);
+color: var(–white);
+box-shadow: 0 4px 0 var(–acorn-dark), 0 6px 18px rgba(200,114,42,0.35);
+}
+.record-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(–acorn-dark), 0 10px 24px rgba(200,114,42,0.4); }
+.record-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(–acorn-dark); }
+.record-btn.recording {
+background: #e03a3a;
+box-shadow: 0 4px 0 #9b1c1c, 0 6px 18px rgba(220,60,60,0.4);
+animation: pulse-btn 0.8s ease-in-out infinite;
+}
+@keyframes pulse-btn {
+0%,100% { box-shadow: 0 4px 0 #9b1c1c, 0 0 0 0 rgba(220,60,60,0.5); }
+50% { box-shadow: 0 4px 0 #9b1c1c, 0 0 0 12px rgba(220,60,60,0); }
+}
+.record-dot {
+width: 14px; height: 14px;
+border-radius: 50%;
+background: var(–white);
+transition: all 0.18s;
+}
+.recording .record-dot { animation: blink-dot 0.8s steps(1) infinite; }
+@keyframes blink-dot { 50% { opacity: 0; } }
+
+/* Sliders */
+.sliders { display: flex; flex-direction: column; gap: 14px; }
+.slider-row { display: flex; flex-direction: column; gap: 6px; }
+.slider-label {
+display: flex;
+justify-content: space-between;
+font-size: 0.85rem;
+font-weight: 700;
+color: var(–stripe);
+letter-spacing: 0.3px;
+}
+.slider-label .val {
+font-family: ‘Fredoka One’, cursive;
+color: var(–acorn);
+font-size: 0.95rem;
+}
+input[type=range] {
+width: 100%;
+-webkit-appearance: none;
+height: 8px;
+border-radius: 50px;
+background: linear-gradient(to right, var(–acorn) var(–pct, 50%), #e8d5b0 var(–pct, 50%));
+outline: none;
+cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+-webkit-appearance: none;
+width: 22px; height: 22px;
+border-radius: 50%;
+background: var(–acorn-dark);
+border: 3px solid var(–white);
+box-shadow: 0 2px 6px var(–shadow);
+transition: transform 0.15s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+/* Playback */
+.playback-section {
+display: flex;
+flex-direction: column;
+gap: 10px;
+opacity: 0;
+transition: opacity 0.3s;
+pointer-events: none;
+}
+.playback-section.visible { opacity: 1; pointer-events: all; }
+
+.play-btn {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+width: 100%;
+padding: 13px;
+border-radius: 50px;
+border: 3px solid var(–leaf);
+font-family: ‘Fredoka One’, cursive;
+font-size: 1.15rem;
+background: transparent;
+color: var(–leaf);
+cursor: pointer;
+transition: all 0.15s;
+}
+.play-btn:hover { background: var(–leaf); color: white; }
+.play-btn:active { transform: scale(0.97); }
+
+.download-btn {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+width: 100%;
+padding: 13px;
+border-radius: 50px;
+border: 3px solid var(–acorn);
+font-family: ‘Fredoka One’, cursive;
+font-size: 1.1rem;
+background: transparent;
+color: var(–acorn);
+cursor: pointer;
+text-decoration: none;
+transition: all 0.15s;
+}
+.download-btn:hover { background: var(–acorn); color: white; }
+
+.status {
+text-align: center;
+font-weight: 700;
+font-size: 0.9rem;
+color: var(–acorn-dark);
+min-height: 20px;
+}
+
+/* Waveform viz */
+canvas#viz {
+width: 100%;
+height: 48px;
+border-radius: 10px;
+background: #f5ead0;
+display: block;
+}
+
+.tip {
+text-align: center;
+font-size: 0.78rem;
+color: #a07040;
+font-weight: 600;
+}
+</style>
+
+</head>
+<body>
+
+<div class="bg-deco" id="bgDeco"></div>
+
+<div class="container">
+  <h1>🐿️ Chipmunk<br><span>Voice Mod</span></h1>
+
+  <!-- Chipmunk face -->
+
+  <div class="chipmunk" id="chipmunk">
+    <div class="face-bg"></div>
+    <div class="stripe-m"></div>
+    <div class="stripe-l"></div>
+    <div class="stripe-r"></div>
+    <div class="ear left"><div class="ear-inner"></div></div>
+    <div class="ear right"><div class="ear-inner"></div></div>
+    <div class="cheeks">
+      <div class="cheek-puff"></div>
+      <div class="cheek-puff"></div>
+    </div>
+    <div class="eyes">
+      <div class="eye blink"></div>
+      <div class="eye blink" style="animation-delay:0.15s"></div>
+    </div>
+    <div class="nose"></div>
+    <div class="mouth"></div>
+  </div>
+
+  <div class="card">
+    <canvas id="viz"></canvas>
+
+```
+<div class="sliders">
+  <div class="slider-row">
+    <div class="slider-label">🎵 Pitch <span class="val" id="pitchVal">2.0×</span></div>
+    <input type="range" id="pitchSlider" min="1.2" max="4.0" step="0.1" value="2.0">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label">⚡ Speed <span class="val" id="speedVal">1.4×</span></div>
+    <input type="range" id="speedSlider" min="0.8" max="2.5" step="0.05" value="1.4">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label">🔊 Volume <span class="val" id="volVal">100%</span></div>
+    <input type="range" id="volSlider" min="0" max="200" step="5" value="100">
+  </div>
+</div>
+
+<button class="record-btn" id="recordBtn">
+  <span class="record-dot"></span>
+  <span id="recordLabel">Hold to Record</span>
+</button>
+
+<div class="playback-section" id="playback">
+  <button class="play-btn" id="playBtn">▶ Play Chipmunk!</button>
+  <a class="download-btn" id="downloadBtn" download="chipmunk-voice.wav">⬇ Download</a>
+</div>
+
+<p class="status" id="status">Press & hold to record your voice 🎤</p>
+<p class="tip">💡 Tip: Speak clearly — the chipmunk effect works best at normal speed!</p>
+```
+
+  </div>
+</div>
+
+<script>
+// Background decorations
+const decos = ['🐿️','🌰','🍂','🍁','🌿','🌾'];
+const bgDeco = document.getElementById('bgDeco');
+for (let i = 0; i < 18; i++) {
+  const s = document.createElement('span');
+  s.textContent = decos[Math.floor(Math.random() * decos.length)];
+  s.style.left = Math.random() * 100 + '%';
+  s.style.top = Math.random() * 100 + '%';
+  s.style.fontSize = (1 + Math.random() * 2) + 'rem';
+  s.style.animationDelay = (Math.random() * 8) + 's';
+  s.style.animationDuration = (5 + Math.random() * 6) + 's';
+  bgDeco.appendChild(s);
+}
+
+// Audio context & nodes
+let audioCtx, analyser, animId;
+let mediaRecorder, recordedChunks = [];
+let processedBuffer = null;
+
+const recordBtn = document.getElementById('recordBtn');
+const recordLabel = document.getElementById('recordLabel');
+const playBtn = document.getElementById('playBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const playbackSection = document.getElementById('playback');
+const statusEl = document.getElementById('status');
+const chipmunk = document.getElementById('chipmunk');
+const canvas = document.getElementById('viz');
+const ctx2d = canvas.getContext('2d');
+
+// Slider UI
+function setupSlider(sliderId, valId, fmt) {
+  const s = document.getElementById(sliderId);
+  const v = document.getElementById(valId);
+  function update() {
+    const pct = ((s.value - s.min) / (s.max - s.min) * 100).toFixed(1) + '%';
+    s.style.setProperty('--pct', pct);
+    v.textContent = fmt(s.value);
+  }
+  s.addEventListener('input', update);
+  update();
+}
+setupSlider('pitchSlider', 'pitchVal', v => parseFloat(v).toFixed(1) + '×');
+setupSlider('speedSlider', 'speedVal', v => parseFloat(v).toFixed(2) + '×');
+setupSlider('volSlider', 'volVal', v => Math.round(v) + '%');
+
+// Canvas resize
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  ctx2d.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function drawIdle() {
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  ctx2d.clearRect(0, 0, w, h);
+  ctx2d.fillStyle = '#f5ead0';
+  ctx2d.fillRect(0, 0, w, h);
+  ctx2d.strokeStyle = '#d4a97060';
+  ctx2d.lineWidth = 2;
+  ctx2d.beginPath();
+  ctx2d.moveTo(0, h/2);
+  ctx2d.lineTo(w, h/2);
+  ctx2d.stroke();
+}
+drawIdle();
+
+function drawWaveform(dataArray) {
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  ctx2d.clearRect(0, 0, w, h);
+  ctx2d.fillStyle = '#f5ead0';
+  ctx2d.fillRect(0, 0, w, h);
+
+  const sliceWidth = w / dataArray.length;
+  ctx2d.beginPath();
+  ctx2d.strokeStyle = '#C8722A';
+  ctx2d.lineWidth = 2.5;
+  ctx2d.lineJoin = 'round';
+
+  for (let i = 0; i < dataArray.length; i++) {
+    const v = dataArray[i] / 128.0;
+    const y = (v * h) / 2;
+    if (i === 0) ctx2d.moveTo(0, y);
+    else ctx2d.lineTo(i * sliceWidth, y);
+  }
+  ctx2d.stroke();
+}
+
+// Recording
+let isRecording = false;
+let stream;
+
+async function startRecording() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    const source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    function vizLoop() {
+      animId = requestAnimationFrame(vizLoop);
+      analyser.getByteTimeDomainData(dataArray);
+      drawWaveform(dataArray);
+    }
+    vizLoop();
+
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = processRecording;
+    mediaRecorder.start();
+
+    isRecording = true;
+    recordBtn.classList.add('recording');
+    recordLabel.textContent = 'Recording... Release!';
+    statusEl.textContent = '🔴 Recording — speak now!';
+    chipmunk.classList.add('talking');
+    playbackSection.classList.remove('visible');
+  } catch(e) {
+    statusEl.textContent = '❌ Mic access denied. Please allow microphone.';
+  }
+}
+
+function getSupportedMimeType() {
+  const types = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+  return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+}
+
+function stopRecording() {
+  if (!isRecording) return;
+  isRecording = false;
+  mediaRecorder.stop();
+  stream.getTracks().forEach(t => t.stop());
+  cancelAnimationFrame(animId);
+  recordBtn.classList.remove('recording');
+  recordLabel.textContent = 'Hold to Record';
+  chipmunk.classList.remove('talking');
+  statusEl.textContent = '⚙️ Chipmunkifying your voice…';
+  drawIdle();
+}
+
+async function processRecording() {
+  const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'audio/webm' });
+  const arrayBuffer = await blob.arrayBuffer();
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const decoded = await ctx.decodeAudioData(arrayBuffer);
+
+  const pitch = parseFloat(document.getElementById('pitchSlider').value);
+  const speed = parseFloat(document.getElementById('speedSlider').value);
+  const vol = parseFloat(document.getElementById('volSlider').value) / 100;
+
+  // Resample to achieve pitch shift (speed up audio = higher pitch)
+  // The chipmunk effect: play back at higher sample rate
+  const originalSR = decoded.sampleRate;
+  const numChannels = decoded.numberOfChannels;
+  const originalLength = decoded.length;
+
+  // New length after speed adjustment
+  const newLength = Math.floor(originalLength / speed);
+  const offlineCtx = new OfflineAudioContext(numChannels, newLength, originalSR);
+
+  const bufferSrc = offlineCtx.createBufferSource();
+  bufferSrc.buffer = decoded;
+  bufferSrc.playbackRate.value = pitch * speed; // pitch shift combined with speed
+
+  const gainNode = offlineCtx.createGain();
+  gainNode.gain.value = vol;
+
+  // Subtle formant-like brightening via EQ
+  const highShelf = offlineCtx.createBiquadFilter();
+  highShelf.type = 'highshelf';
+  highShelf.frequency.value = 3000;
+  highShelf.gain.value = 6;
+
+  const presence = offlineCtx.createBiquadFilter();
+  presence.type = 'peaking';
+  presence.frequency.value = 1500;
+  presence.Q.value = 1.2;
+  presence.gain.value = 4;
+
+  bufferSrc.connect(presence);
+  presence.connect(highShelf);
+  highShelf.connect(gainNode);
+  gainNode.connect(offlineCtx.destination);
+  bufferSrc.start(0);
+
+  processedBuffer = await offlineCtx.startRendering();
+
+  // Convert to WAV for download/playback
+  const wavBlob = bufferToWave(processedBuffer, processedBuffer.length);
+  const url = URL.createObjectURL(wavBlob);
+  downloadBtn.href = url;
+
+  playBtn.onclick = () => playBuffer(processedBuffer);
+
+  playbackSection.classList.add('visible');
+  statusEl.textContent = '✅ Ready! Press play to hear your chipmunk voice 🐿️';
+}
+
+function playBuffer(buffer) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  src.connect(ctx.destination);
+  src.start(0);
+  chipmunk.classList.add('talking');
+  statusEl.textContent = '🔊 Playing chipmunk voice!';
+  src.onended = () => {
+    chipmunk.classList.remove('talking');
+    statusEl.textContent = '✅ Done! Record again or adjust sliders.';
+  };
+}
+
+// WAV encoder
+function bufferToWave(abuffer, len) {
+  const numOfChan = abuffer.numberOfChannels;
+  const length = len * numOfChan * 2 + 44;
+  const buffer = new ArrayBuffer(length);
+  const view = new DataView(buffer);
+  const channels = [];
+  let offset = 0, pos = 0;
+
+  function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+  function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+  // WAV header
+  setUint32(0x46464952); // "RIFF"
+  setUint32(length - 8);
+  setUint32(0x45564157); // "WAVE"
+  setUint32(0x20746d66); // "fmt "
+  setUint32(16);
+  setUint16(1);
+  setUint16(numOfChan);
+  setUint32(abuffer.sampleRate);
+  setUint32(abuffer.sampleRate * 2 * numOfChan);
+  setUint16(numOfChan * 2);
+  setUint16(16);
+  setUint32(0x61746164); // "data"
+  setUint32(length - pos - 4);
+
+  for (let i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+  while (pos < length) {
+    for (let i = 0; i < numOfChan; i++) {
+      let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+      view.setInt16(pos, sample, true);
+      pos += 2;
+    }
+    offset++;
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+// Touch & mouse events for hold-to-record
+recordBtn.addEventListener('mousedown', startRecording);
+recordBtn.addEventListener('mouseup', stopRecording);
+recordBtn.addEventListener('mouseleave', stopRecording);
+recordBtn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
+recordBtn.addEventListener('touchend', e => { e.preventDefault(); stopRecording(); });
+
+// Re-process when sliders change if we have a recording
+document.getElementById('pitchSlider').addEventListener('change', () => { if (recordedChunks.length) processRecording(); });
+document.getElementById('speedSlider').addEventListener('change', () => { if (recordedChunks.length) processRecording(); });
+document.getElementById('volSlider').addEventListener('change', () => { if (recordedChunks.length) processRecording(); });
+</script>
+
+</body>
+</html>
