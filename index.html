@@ -391,11 +391,15 @@ font-weight: 600;
   </div>
   <div class="slider-row">
     <div class="slider-label">⚡ Speed <span class="val" id="speedVal">1.4×</span></div>
-    <input type="range" id="speedSlider" min="0.8" max="2.5" step="0.05" value="1.4">
+    <input type="range" id="speedSlider" min="0.2" max="2.5" step="0.05" value="1.4">
   </div>
   <div class="slider-row">
     <div class="slider-label">🔊 Volume <span class="val" id="volVal">100%</span></div>
     <input type="range" id="volSlider" min="0" max="200" step="5" value="100">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label">🏔️ Echo <span class="val" id="echoVal">Off</span></div>
+    <input type="range" id="echoSlider" min="0" max="100" step="1" value="0">
   </div>
 </div>
 
@@ -459,8 +463,21 @@ function setupSlider(sliderId, valId, fmt) {
   update();
 }
 setupSlider('pitchSlider', 'pitchVal', v => parseFloat(v).toFixed(1) + '×');
-setupSlider('speedSlider', 'speedVal', v => parseFloat(v).toFixed(2) + '×');
+setupSlider('speedSlider', 'speedVal', v => {
+  const n = parseFloat(v);
+  if (n < 0.5) return n.toFixed(2) + '× 🐢';
+  if (n < 0.9) return n.toFixed(2) + '× slow';
+  return n.toFixed(2) + '×';
+});
 setupSlider('volSlider', 'volVal', v => Math.round(v) + '%');
+setupSlider('echoSlider', 'echoVal', v => {
+  const n = parseInt(v);
+  if (n === 0) return 'Off';
+  if (n < 30) return 'Light';
+  if (n < 60) return 'Cave';
+  if (n < 85) return 'Canyon';
+  return 'Infinite';
+});
 
 // Canvas resize
 function resizeCanvas() {
