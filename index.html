@@ -582,31 +582,178 @@ function stopRecording() {
 async function processRecording() {
   const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'audio/webm' });
   const arrayBuffer = await blob.arrayBuffer();
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const decoded = await ctx.decodeAudioData(arrayBuffer);
+  const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const decoded = await tmpCtx.decodeAudioData(arrayBuffer);
+  await tmpCtx.close();
 
-  const pitch = parseFloat(document.getElementById('pitchSlider').value);
+  const pitchFactor = parseFloat(document.getElementById('pitchSlider').value);
   const speed = parseFloat(document.getElementById('speedSlider').value);
   const vol = parseFloat(document.getElementById('volSlider').value) / 100;
   const echoAmt = parseFloat(document.getElementById('echoSlider').value) / 100;
 
-  const originalSR = decoded.sampleRate;
+  const sampleRate = decoded.sampleRate;
   const numChannels = decoded.numberOfChannels;
-  const originalLength = decoded.length;
 
-  // Extra buffer length to let echo tail ring out
-  const echoTailSamples = echoAmt > 0 ? Math.floor(originalSR * 3.5) : 0;
-  const newLength = Math.floor(originalLength / speed) + echoTailSamples;
-  const offlineCtx = new OfflineAudioContext(numChannels, newLength, originalSR);
+  // ── Phase vocoder pitch shift (time-domain OLA) ──────────────────────────
+  // We pitch-shift WITHOUT changing duration, then apply speed separately.
+  const fftSize = 2048;
+  const hopSize = fftSize / 4;
+
+  function phaseVocoderShift(inputData, factor) {
+    const inLen = inputData.length;
+    const outLen = inLen; // same length = no tempo change
+    const output = new Float32Array(outLen);
+
+    const hann = new Float32Array(fftSize);
+    for (let i = 0; i < fftSize; i++)
+      hann[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / fftSize));
+
+    const lastPhase   = new Float32Array(fftSize / 2 + 1);
+    const sumPhase    = new Float32Array(fftSize / 2 + 1);
+    const outputAccum = new Float32Array(outLen + fftSize);
+
+    const stepSize = Math.floor(hopSize / factor); // read hop (smaller = pitch up)
+
+    let inPtr = 0;
+    let outPtr = 0;
+
+    while (inPtr + fftSize <= inLen) {
+      // Read frame
+      const frame = new Float32Array(fftSize);
+      for (let i = 0; i < fftSize; i++) {
+        frame[i] = (inPtr + i < inLen ? inputData[inPtr + i] : 0) * hann[i];
+      }
+
+      // FFT
+      const real = Array.from(frame);
+      const imag = new Array(fftSize).fill(0);
+      fft(real, imag);
+
+      // Phase accumulation
+      const magn  = new Float32Array(fftSize / 2 + 1);
+      const phase = new Float32Array(fftSize / 2 + 1);
+      const trueFreq = new Float32Array(fftSize / 2 + 1);
+
+      for (let k = 0; k <= fftSize / 2; k++) {
+        magn[k] = Math.sqrt(real[k] * real[k] + imag[k] * imag[k]);
+        const currentPhase = Math.atan2(imag[k], real[k]);
+        let dp = currentPhase - lastPhase[k] - 2 * Math.PI * k * stepSize / fftSize;
+        // wrap to [-π, π]
+        dp -= 2 * Math.PI * Math.round(dp / (2 * Math.PI));
+        trueFreq[k] = 2 * Math.PI * k / fftSize + dp / stepSize;
+        lastPhase[k] = currentPhase;
+        sumPhase[k] += hopSize * trueFreq[k];
+        phase[k] = sumPhase[k];
+      }
+
+      // Rebuild spectrum at new phases
+      const outReal = new Array(fftSize).fill(0);
+      const outImag = new Array(fftSize).fill(0);
+      for (let k = 0; k <= fftSize / 2; k++) {
+        outReal[k] = magn[k] * Math.cos(phase[k]);
+        outImag[k] = magn[k] * Math.sin(phase[k]);
+        if (k > 0 && k < fftSize / 2) {
+          outReal[fftSize - k] = outReal[k];
+          outImag[fftSize - k] = -outImag[k];
+        }
+      }
+
+      // IFFT
+      ifft(outReal, outImag);
+
+      // Overlap-add
+      for (let i = 0; i < fftSize; i++) {
+        if (outPtr + i < outputAccum.length)
+          outputAccum[outPtr + i] += outReal[i] * hann[i];
+      }
+
+      inPtr  += stepSize;
+      outPtr += hopSize;
+    }
+
+    // Normalise and trim
+    const result = new Float32Array(outLen);
+    const norm = hopSize / (fftSize * 0.5);
+    for (let i = 0; i < outLen; i++) result[i] = outputAccum[i] * norm;
+    return result;
+  }
+
+  // ── Cooley-Tukey FFT (in-place on JS Arrays) ─────────────────────────────
+  function fft(re, im) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -2 * Math.PI / len;
+      const wRe = Math.cos(ang), wIm = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let curRe = 1, curIm = 0;
+        for (let j = 0; j < len / 2; j++) {
+          const uRe = re[i+j], uIm = im[i+j];
+          const vRe = re[i+j+len/2]*curRe - im[i+j+len/2]*curIm;
+          const vIm = re[i+j+len/2]*curIm + im[i+j+len/2]*curRe;
+          re[i+j] = uRe+vRe; im[i+j] = uIm+vIm;
+          re[i+j+len/2] = uRe-vRe; im[i+j+len/2] = uIm-vIm;
+          const nextRe = curRe*wRe - curIm*wIm;
+          curIm = curRe*wIm + curIm*wRe; curRe = nextRe;
+        }
+      }
+    }
+  }
+
+  function ifft(re, im) {
+    im = im.map(v => -v);
+    fft(re, im);
+    const n = re.length;
+    for (let i = 0; i < n; i++) { re[i] /= n; im[i] = -im[i] / n; }
+  }
+
+  // ── Resample for speed (linear interpolation) ─────────────────────────────
+  function resample(data, factor) {
+    const outLen = Math.floor(data.length / factor);
+    const out = new Float32Array(outLen);
+    for (let i = 0; i < outLen; i++) {
+      const pos = i * factor;
+      const lo = Math.floor(pos);
+      const hi = Math.min(lo + 1, data.length - 1);
+      const t = pos - lo;
+      out[i] = data[lo] * (1 - t) + data[hi] * t;
+    }
+    return out;
+  }
+
+  // ── Process each channel ──────────────────────────────────────────────────
+  statusEl.textContent = '⚙️ Pitch shifting… (this takes a moment)';
+  await new Promise(r => setTimeout(r, 10)); // let UI update
+
+  const channelData = [];
+  for (let c = 0; c < numChannels; c++) {
+    const input = decoded.getChannelData(c);
+    const pitched = phaseVocoderShift(input, pitchFactor);
+    const speeded = speed !== 1.0 ? resample(pitched, speed) : pitched;
+    channelData.push(speeded);
+  }
+
+  const outLen = channelData[0].length;
+  const echoTailSamples = echoAmt > 0 ? Math.floor(sampleRate * 3.5) : 0;
+  const totalLen = outLen + echoTailSamples;
+
+  // Build AudioBuffer from processed channel data
+  const offlineCtx = new OfflineAudioContext(numChannels, totalLen, sampleRate);
+  const pitchedBuffer = offlineCtx.createBuffer(numChannels, outLen, sampleRate);
+  for (let c = 0; c < numChannels; c++) pitchedBuffer.copyToChannel(channelData[c], c);
 
   const bufferSrc = offlineCtx.createBufferSource();
-  bufferSrc.buffer = decoded;
-  bufferSrc.playbackRate.value = pitch * speed;
+  bufferSrc.buffer = pitchedBuffer;
+  bufferSrc.playbackRate.value = 1.0; // already processed
 
   const gainNode = offlineCtx.createGain();
   gainNode.gain.value = vol;
 
-  // EQ brightening
   const highShelf = offlineCtx.createBiquadFilter();
   highShelf.type = 'highshelf';
   highShelf.frequency.value = 3000;
@@ -618,46 +765,33 @@ async function processRecording() {
   presence.Q.value = 1.2;
   presence.gain.value = 4;
 
-  // Echo chain: delay + feedback loop
   const delayNode = offlineCtx.createDelay(3.0);
-  delayNode.delayTime.value = 0.32; // 320ms delay tap
-
+  delayNode.delayTime.value = 0.32;
   const feedbackGain = offlineCtx.createGain();
-  feedbackGain.gain.value = echoAmt * 0.72; // feedback amount
-
+  feedbackGain.gain.value = echoAmt * 0.72;
   const echoMixGain = offlineCtx.createGain();
-  echoMixGain.gain.value = echoAmt * 0.85; // wet mix
-
+  echoMixGain.gain.value = echoAmt * 0.85;
   const dryGain = offlineCtx.createGain();
   dryGain.gain.value = 1.0;
 
-  // Signal path: src → EQ chain → gainNode → dry out + echo
   bufferSrc.connect(presence);
   presence.connect(highShelf);
   highShelf.connect(gainNode);
-
-  // Dry path
   gainNode.connect(dryGain);
   dryGain.connect(offlineCtx.destination);
-
-  // Wet/echo path
   gainNode.connect(echoMixGain);
   echoMixGain.connect(delayNode);
   delayNode.connect(offlineCtx.destination);
-  // Feedback loop
   delayNode.connect(feedbackGain);
   feedbackGain.connect(delayNode);
 
   bufferSrc.start(0);
-
   processedBuffer = await offlineCtx.startRendering();
 
   const wavBlob = bufferToWave(processedBuffer, processedBuffer.length);
   const url = URL.createObjectURL(wavBlob);
   downloadBtn.href = url;
-
   playBtn.onclick = () => playBuffer(processedBuffer);
-
   playbackSection.classList.add('visible');
   statusEl.textContent = '✅ Ready! Press play to hear your chipmunk voice 🐿️';
 }
